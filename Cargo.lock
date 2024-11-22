@@ -3,6 +3,21 @@
 version = 3
 
 [[package]]
+name = "ads126x"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.6.0",
+ "cortex-m",
+ "defmt",
+ "defmt-test",
+ "embedded-hal 0.2.7",
+ "heapless 0.7.17",
+ "nb 1.1.0",
+ "panic-probe",
+ "stm32h7xx-hal",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
