@@ -22,6 +22,7 @@ defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
 messages = {workspace = true}
+ads126x = {path = "../../crates/ads126x"}
 
 [dev-dependencies]
 defmt-test = { workspace = true }

@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod adc_manager;
 mod communication;
 mod data_manager;
 mod types;
@@ -28,6 +29,8 @@ use stm32h7xx_hal::gpio::{Output, PushPull};
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::{rcc, rcc::rec};
+use messages::Message;
+use stm32h7xx_hal::{gpio::{Alternate, Pin}, hal::spi};
 use types::COM_ID; // global logger
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
@@ -44,8 +47,8 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
 
-    use messages::Message;
-    use stm32h7xx_hal::gpio::{Alternate, Pin};
+
+    use adc_manager::AdcManager;
 
     use super::*;
 
@@ -56,12 +59,13 @@ mod app {
         // sd_manager: SdManager<
         //     stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
         //     PA4<Output<PushPull>>,
-        // >,
+        // >, 
         radio_manager: RadioManager,
         can_command_manager: CanCommandManager,
         can_data_manager: CanDataManager,
         sbg_power: PB4<Output<PushPull>>,
         rtc: rtc::Rtc,
+        adc_manager: AdcManager,
     }
     #[local]
     struct LocalResources {
@@ -130,7 +134,9 @@ mod app {
         // GPIO
         let gpioa = ctx.device.GPIOA.split(ccdr.peripheral.GPIOA);
         let gpiod = ctx.device.GPIOD.split(ccdr.peripheral.GPIOD);
+        let gpioc = ctx.device.GPIOC.split(ccdr.peripheral.GPIOC);
         let gpiob = ctx.device.GPIOB.split(ccdr.peripheral.GPIOB);
+        let gpioe = ctx.device.GPIOE.split(ccdr.peripheral.GPIOE);
 
         let pins = gpiob.pb14.into_alternate();
         let mut c0 = ctx
@@ -250,6 +256,31 @@ mod app {
 
         // let sd_manager = SdManager::new(spi_sd, cs_sd);
 
+        // ADC setup 
+        let adc_spi: stm32h7xx_hal::spi::Spi<
+            stm32h7xx_hal::stm32::SPI4,
+            stm32h7xx_hal::spi::Enabled,
+            u8,
+        > = ctx.device.SPI4.spi(
+            (
+                gpioe.pe2.into_alternate(),
+                gpioe.pe5.into_alternate(),
+                gpioe.pe6.into_alternate(),
+            ),
+            stm32h7xx_hal::spi::Config::new(spi::MODE_0),
+            1.MHz(),
+            ccdr.peripheral.SPI4,
+            &ccdr.clocks,
+        );
+
+        let adc1_cs = gpioc.pc10.into_push_pull_output();
+        let adc2_cs = gpiod.pd2.into_push_pull_output();
+
+        let adc1_rst = gpioc.pc11.into_push_pull_output();
+        let adc2_rst = gpioe.pe0.into_push_pull_output();
+
+        let adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
+
         // leds
         let led_red = gpioa.pa2.into_push_pull_output();
         let led_green = gpioa.pa3.into_push_pull_output();
@@ -313,6 +344,7 @@ mod app {
                 can_data_manager,
                 sbg_power,
                 rtc,
+                adc_manager
             },
             LocalResources {
                 led_red,
@@ -327,9 +359,9 @@ mod app {
         loop {
             cx.shared.em.run(|| {
                 let message = Message::new(
-                    cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }),
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
                     COM_ID,
                     messages::state::State::new(messages::state::StateData::Initializing),
                 );
@@ -363,10 +395,13 @@ mod app {
                     stm32h7xx_hal::rcc::ResetReason::Unknown { rcc_rsr } => sensor::ResetReason::Unknown { rcc_rsr },
                     stm32h7xx_hal::rcc::ResetReason::WindowWatchdogReset => sensor::ResetReason::WindowWatchdogReset,
                 };
-                let message =
-                    messages::Message::new(cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }), COM_ID, sensor::Sensor::new(x));
+                let message = messages::Message::new(
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
+                    COM_ID,
+                    sensor::Sensor::new(x),
+                );
 
                 cx.shared.em.run(|| {
                     spawn!(send_gs, message)?;
@@ -377,6 +412,11 @@ mod app {
         }
     }
 
+    #[task(priority = 3)]
+    async fn delay(_cx: delay::Context, delay: u32) {
+        Mono::delay(delay.millis()).await;
+    }
+
     #[task(shared = [data_manager, &em, rtc])]
     async fn state_send(mut cx: state_send::Context) {
         let state_data = cx
@@ -385,10 +425,13 @@ mod app {
             .lock(|data_manager| data_manager.state.clone());
         cx.shared.em.run(|| {
             if let Some(x) = state_data {
-                let message =
-                    Message::new(cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }), COM_ID, messages::state::State::new(x));
+                let message = Message::new(
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
+                    COM_ID,
+                    messages::state::State::new(x),
+                );
                 spawn!(send_gs, message)?;
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
@@ -442,8 +485,7 @@ mod app {
     }
 
     #[task(priority = 3, shared = [rtc, &em])]
-    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data)
-    {
+    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data) {
         cx.shared.em.run(|| {
             cx.shared.rtc.lock(|rtc| {
                 let message = messages::Message::new(

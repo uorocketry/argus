@@ -114,7 +114,7 @@ impl DataManager {
     pub fn handle_data(&mut self, data: Message) {
         match data.data {
             messages::Data::Sensor(ref sensor) => match sensor.data {
-                messages::sensor::SensorData::SbgData(ref sbg_data) => match sbg_data{
+                messages::sensor::SensorData::SbgData(ref sbg_data) => match sbg_data {
                     messages::sensor::SbgData::EkfNavAcc(_) => {
                         self.ekf_nav_acc = Some(data);
                     }
@@ -154,7 +154,7 @@ impl DataManager {
                     messages::sensor::SbgData::GpsPos2(_) => {
                         self.gps_pos_2 = Some(data);
                     }
-                }
+                },
                 messages::sensor::SensorData::RecoverySensing(_) => {
                     self.recovery_sensing = Some(data);
                 }

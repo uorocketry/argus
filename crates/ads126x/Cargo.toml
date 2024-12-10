@@ -1,0 +1,25 @@
+[package]
+name = "ads126x"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+defmt = {workspace = true}
+embedded-hal = {workspace = true}
+bitflags = { version = "2.3.1", features = ["serde"] }
+nb = "1.1.0"
+heapless = {workspace = true}
+cortex-m = { workspace = true }
+
+[dev-dependencies]
+defmt-test = { workspace = true }
+panic-probe = { workspace = true }
+stm32h7xx-hal = { workspace = true }
+
+[[test]]
+name = "example"
+harness = false
+
+[lib]
+name = "ads126x"
+harness = false
