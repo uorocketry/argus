@@ -1,4 +1,4 @@
-use crate::error::hydra_error::HydraError;
+use crate::error::rocket_error::RocketError;
 use crate::herror;
 use core::cell::RefCell;
 use core::sync::atomic::AtomicBool;
@@ -8,10 +8,10 @@ use cortex_m::interrupt::Mutex;
 use defmt::error;
 use heapless::HistoryBuffer;
 
-/// Central error management for HYDRA. A single instance of this should be created for each board.
+/// Central error management for Rocket. A single instance of this should be created for each board.
 pub struct ErrorManager {
     has_error: AtomicBool,
-    error_history: Mutex<RefCell<HistoryBuffer<HydraError, 8>>>,
+    error_history: Mutex<RefCell<HistoryBuffer<RocketError, 8>>>,
 }
 
 impl Default for ErrorManager {
@@ -31,14 +31,14 @@ impl ErrorManager {
     /// Runs the given closure. [`ErrorManager::handle()`] will be called on the closure's result.
     pub fn run<F>(&self, callback: F)
     where
-        F: FnOnce() -> Result<(), HydraError>,
+        F: FnOnce() -> Result<(), RocketError>,
     {
         let result = callback();
         self.handle(result);
     }
 
     /// Handles any possible errors. This will store the error and log it using defmt.
-    pub fn handle(&self, result: Result<(), HydraError>) {
+    pub fn handle(&self, result: Result<(), RocketError>) {
         if let Err(e) = result {
             self.has_error.store(true, Relaxed);
 

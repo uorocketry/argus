@@ -1,6 +1,6 @@
 use crate::data_manager::DataManager;
 use crate::types::COM_ID;
-use common_arm::HydraError;
+use common_arm::RocketError;
 use defmt::{error, info};
 use fdcan::{
     frame::{FrameFormat, TxFrameHeader},
@@ -30,7 +30,7 @@ impl CanCommandManager {
     ) -> Self {
         Self { can }
     }
-    pub fn send_message(&mut self, m: Message) -> Result<(), HydraError> {
+    pub fn send_message(&mut self, m: Message) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         let payload = postcard::to_slice(&m, &mut buf)?;
         let header = TxFrameHeader {
@@ -43,7 +43,7 @@ impl CanCommandManager {
         self.can.transmit(header, payload)?;
         Ok(())
     }
-    pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), HydraError> {
+    pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         while self.can.receive0(&mut buf).is_ok() {
             if let Ok(data) = from_bytes::<Message>(&buf) {
@@ -75,7 +75,7 @@ impl CanDataManager {
     ) -> Self {
         Self { can }
     }
-    pub fn send_message(&mut self, m: Message) -> Result<(), HydraError> {
+    pub fn send_message(&mut self, m: Message) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         let payload = postcard::to_slice(&m, &mut buf)?;
         let header = TxFrameHeader {
@@ -91,7 +91,7 @@ impl CanDataManager {
 
         Ok(())
     }
-    pub fn process_data(&mut self) -> Result<(), HydraError> {
+    pub fn process_data(&mut self) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         while self.can.receive0(&mut buf).is_ok() {
             if let Ok(data) = from_bytes::<Message>(&buf) {
@@ -138,7 +138,7 @@ impl RadioManager {
             mav_sequence: 0,
         }
     }
-    pub fn send_message(&mut self, payload: &[u8]) -> Result<(), HydraError> {
+    pub fn send_message(&mut self, payload: &[u8]) -> Result<(), RocketError> {
         let mav_header = mavlink::MavHeader {
             system_id: 1,
             component_id: 1,
@@ -166,7 +166,7 @@ impl RadioManager {
         self.mav_sequence = self.mav_sequence.wrapping_add(1);
         self.mav_sequence
     }
-    pub fn receive_message(&mut self) -> Result<Message, HydraError> {
+    pub fn receive_message(&mut self) -> Result<Message, RocketError> {
         let (_header, msg): (_, MavMessage) =
             mavlink::read_versioned_msg(&mut self.radio.receiver, mavlink::MavlinkVersion::V2)?;
 
@@ -175,7 +175,7 @@ impl RadioManager {
         match msg {
             mavlink::uorocketry::MavMessage::POSTCARD_MESSAGE(msg) => {
                 Ok(postcard::from_bytes::<Message>(&msg.message)?)
-                // weird Ok syntax to coerce to hydra error type.
+                // weird Ok syntax to coerce to Rocket error type.
             }
             mavlink::uorocketry::MavMessage::COMMAND_MESSAGE(command) => {
                 info!("{}", command.command);

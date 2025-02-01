@@ -82,7 +82,7 @@ mod app {
         let core = ctx.core;
 
         /* Logging Setup */
-        HydraLogging::set_ground_station_callback(queue_gs_message);
+        RocketLogging::set_ground_station_callback(queue_gs_message);
 
         let pwr = ctx.device.PWR.constrain();
         // We could use smps, but the board is not designed for it

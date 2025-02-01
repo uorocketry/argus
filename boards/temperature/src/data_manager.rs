@@ -1,4 +1,4 @@
-use common_arm::HydraError;
+use common_arm::RocketError;
 use messages::command::RadioRate;
 use messages::state::StateData;
 use messages::Message;
@@ -92,7 +92,7 @@ impl DataManager {
         self.reset_reason = Some(reset);
     }
 
-    pub fn handle_command(&mut self, data: Message) -> Result<(), HydraError> {
+    pub fn handle_command(&mut self, data: Message) -> Result<(), RocketError> {
         match data.data {
             messages::Data::Command(command) => match command.data {
                 messages::command::CommandData::PowerDown(_) => {

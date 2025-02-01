@@ -8,7 +8,7 @@ static mut GROUND_STATION_CALLBACK: Option<fn(Log)> = None;
 #[macro_export]
 macro_rules! hinfo {
     ($e:ident$(,)? $($p:expr),*) => {
-        $crate::HydraLogging::log(messages::LogLevel::Info, messages::Event::$e($($p),*));
+        $crate::RocketLogging::log(messages::LogLevel::Info, messages::Event::$e($($p),*));
         defmt::info!("{}", messages::Event::$e($($p),*));
     };
 }
@@ -19,7 +19,7 @@ macro_rules! hinfo {
 #[macro_export]
 macro_rules! hwarning {
     ($e:ident$(,)? $($p:expr),*) => {
-        $crate::HydraLogging::log(messages::LogLevel::Warning, messages::Event::$e($($p),*));
+        $crate::RocketLogging::log(messages::LogLevel::Warning, messages::Event::$e($($p),*));
         defmt::warning!("{}", messages::Event::$e($($p),*));
     };
 }
@@ -30,14 +30,14 @@ macro_rules! hwarning {
 #[macro_export]
 macro_rules! herror {
     ($e:ident$(,)? $($p:expr),*) => {
-        $crate::HydraLogging::log(messages::LogLevel::Error, messages::Event::$e($($p),*));
+        $crate::RocketLogging::log(messages::LogLevel::Error, messages::Event::$e($($p),*));
         defmt::error!("{}", messages::Event::$e($($p),*));
     };
 }
 
-pub struct HydraLogging {}
+pub struct RocketLogging {}
 
-impl HydraLogging {
+impl RocketLogging {
     /// Set the function for sending log messages the ground station. This should be called during
     /// ONCE during init, and NEVER after to avoid any race conditions.
     pub fn set_ground_station_callback(cb: fn(Log)) {
@@ -46,7 +46,7 @@ impl HydraLogging {
         unsafe { GROUND_STATION_CALLBACK = Some(cb) }
     }
 
-    /// Log a message using the callback set in [`HydraLogging::set_ground_station_callback`].
+    /// Log a message using the callback set in [`RocketLogging::set_ground_station_callback`].
     /// While this function can be called directly, usually the [`hinfo`] and similar macros would
     /// be used instead.
     pub fn log(level: LogLevel, event: Event) {

@@ -2,7 +2,7 @@ use core::num::{NonZeroU16, NonZeroU8};
 
 use crate::data_manager::DataManager;
 use crate::types::COM_ID;
-use common_arm::HydraError;
+use common_arm::RocketError;
 use defmt::info;
 use fdcan::Instance;
 use fdcan::{
@@ -72,7 +72,7 @@ impl<I: Instance> CanManager<I> {
             can: can.into_normal(),
         }
     }
-    pub fn send_message(&mut self, m: Message) -> Result<(), HydraError> {
+    pub fn send_message(&mut self, m: Message) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         let payload = postcard::to_slice(&m, &mut buf)?;
         let header = TxFrameHeader {
@@ -85,7 +85,7 @@ impl<I: Instance> CanManager<I> {
         self.can.transmit(header, payload)?;
         Ok(())
     }
-    pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), HydraError> {
+    pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), RocketError> {
         let mut buf = [0u8; 64];
         while self.can.receive0(&mut buf).is_ok() {
             if let Ok(data) = from_bytes::<Message>(&buf) {

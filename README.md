@@ -1,4 +1,4 @@
-# ARGUS 
+# Rocket 
 uORocketry's rocket instrumentation system. 
 
 ## Setup and Building 

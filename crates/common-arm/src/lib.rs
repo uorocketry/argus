@@ -11,8 +11,8 @@ mod logging;
 mod sd_manager;
 
 pub use crate::error::error_manager::ErrorManager;
-pub use crate::error::hydra_error::{ErrorContextTrait, HydraError, SpawnError};
-pub use crate::logging::HydraLogging;
+pub use crate::error::rocket_error::{ErrorContextTrait, RocketError, SpawnError};
+pub use crate::logging::RocketLogging;
 pub use crate::sd_manager::SdManager;
 
 use defmt_rtt as _; // global logger
