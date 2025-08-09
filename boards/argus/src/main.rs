@@ -340,8 +340,7 @@ mod app {
                 ads126x::register::PositiveInpMux::AIN0,
             ) {
                 info!("Failed to set ADC1 inpmux");
-            }
-            else {
+            } else {
                 #[cfg(feature = "strain")]
                 if let Ok(voltage) = adc_manager.read_adc1_data() {
                     info!("ADC1 voltage: {:?}", voltage);
@@ -367,7 +366,7 @@ mod app {
                     info!("Error reading data");
                 }
             }
-            adc_manager.set_adc2_inpmux(
+            let _ = adc_manager.set_adc2_inpmux(
                 ads126x::register::NegativeInpMux::AIN1,
                 ads126x::register::PositiveInpMux::AIN0,
             );
