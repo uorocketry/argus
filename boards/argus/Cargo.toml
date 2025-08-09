@@ -30,6 +30,7 @@ messages = {workspace = true}
 ads126x = {path = "../../crates/ads126x"}
 smlang = {workspace = true}
 embedded-hal = {workspace = true}
+straingauge_converter = { version = "0.1.1", path = "../../crates/straingauge_converter" }
 
 [dev-dependencies]
 defmt-test = { workspace = true }

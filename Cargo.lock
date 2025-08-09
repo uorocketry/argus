@@ -40,6 +40,7 @@ dependencies = [
  "rtic-sync",
  "smlang",
  "stm32h7xx-hal",
+ "straingauge_converter",
 ]
 
 [[package]]
@@ -1086,6 +1087,10 @@ dependencies = [
  "stm32h7",
  "void",
 ]
+
+[[package]]
+name = "straingauge_converter"
+version = "0.1.1"
 
 [[package]]
 name = "string_morph"

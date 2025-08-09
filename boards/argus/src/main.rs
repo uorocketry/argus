@@ -43,6 +43,7 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
+    use argus::types::Feature;
     use messages::FormattedNaiveDateTime;
 
     use crate::time_manager::TimeManager;
@@ -287,7 +288,7 @@ mod app {
                     sm::States::Idle => spawn!(sm_idle),
                     sm::States::Init => spawn!(sm_init),
                 };
-                
+
                 last_state = state;
             }
 
@@ -334,10 +335,21 @@ mod app {
                 }
             }
             // change the inpmux
-            adc_manager.set_adc1_inpmux(
+            if let Err(_) = adc_manager.set_adc1_inpmux(
                 ads126x::register::NegativeInpMux::AIN1,
                 ads126x::register::PositiveInpMux::AIN0,
-            );
+            ) {
+                info!("Failed to set ADC1 inpmux");
+            }
+            else {
+                #[cfg(feature = "strain")]
+                if let Ok(voltage) = adc_manager.read_adc1_data() {
+                    info!("ADC1 voltage: {:?}", voltage);
+                    // Convert voltage to strain
+                    let strain = straingauge_converter::voltage_to_strain_full(voltage as f64, 0.0);
+                    info!("ADC1 strain: {:?}", strain);
+                }
+            }
         });
         cx.local.adc1_int.clear_interrupt_pending_bit();
     }
