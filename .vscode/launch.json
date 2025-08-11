@@ -1,31 +1,46 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "probe-rs-debug",
+      "request": "launch",
+      "name": "Probe-rs Debug",
+      "preLaunchTask": "build-${input:task}",
+      "flashingConfig": {
+        "flashingEnabled": true
+      },
+      "chip": "STM32H733VGTx",
+      "coreConfigs": [
         {
-            "type": "probe-rs-debug",
-            "request": "launch",
-            "name": "Probe-rs Debug",
-            "preLaunchTask": "build-${input:task}",
-            "flashingConfig": {
-                "flashingEnabled": true
+          "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
+          "rttEnabled": true,
+          "rttChannelFormats": [
+            {
+              "channelNumber": 0,
+              // Format RTT data as String data
+              "dataFormat": "String",
+              // Include host-side timestamps for every line of data transferred from the target RTT output
+              "showTimestamps": true
             },
-            "chip": "STM32H733VGTx",
-            "coreConfigs": [
-                {
-                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
-                }
-            ]
+            {
+              "channelNumber": 1,
+              // Treat data as raw binary data, and do not format in any way
+              "dataFormat": "BinaryLE"
+            }
+          ]
         }
-    ],
-    "inputs": [
-        {
-            "id": "task",
-            "type": "pickString",
-            "description": "Which task would you like to run?",
-            "options": ["strain", "temperature", "pressure"]
-        }
-    ]
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "task",
+      "type": "pickString",
+      "description": "Which task would you like to run?",
+      "options": ["strain", "temperature", "pressure"]
+    }
+  ]
 }

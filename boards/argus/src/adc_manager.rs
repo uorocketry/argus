@@ -39,6 +39,130 @@ where
             adc2: Ads126x::new(adc2_rst),
             adc1_cs,
             adc2_cs,
+            #[cfg(feature = "strain")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN1,
+                //     positive: ads126x::register::PositiveInpMux::AIN0,
+                // }, 
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN8,
+                //     positive: ads126x::register::PositiveInpMux::AIN9,
+                // }
+            ]).unwrap()),
+            #[cfg(feature = "pressure")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN2,
+                //     positive: ads126x::register::PositiveInpMux::AIN3,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // }
+            ]).unwrap()),
+            #[cfg(feature = "temperature")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN2,
+                //     positive: ads126x::register::PositiveInpMux::AIN3,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // },
+         
+            ]).unwrap()),
+
+            #[cfg(feature = "strain")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                }, 
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN8,
+                    positive: ads126x::register::PositiveInpMux::AIN9,
+                }
+            ]).unwrap()),
+            #[cfg(feature = "pressure")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                }
+            ]).unwrap()),
+            #[cfg(feature = "temperature")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                },
+            ]).unwrap()),
         }
     }
 
@@ -64,9 +188,11 @@ where
         mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
         self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
 
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(DataRate::SPS1200);
-        self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_dr(DataRate::SPS10);
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV8); 
+
+            self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
 
         // read back the mode1 and mode2 registers to verify
         let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;

@@ -489,50 +489,62 @@ mod app {
                     m,
                 );
 
-                spawn!(queue_data_internal, message)?;
-                Ok(())
-            })
-        });
+            #[cfg(feature = "pressure")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
+                info!("volatage: {}", volts);
+                let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                info!("Pressure (psi): {}", pressure);
+            }
+
+            #[cfg(feature = "strain")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
+                info!("volatage: {}", volts);
+                let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+                info!("Strain: {}", strain);
+            }
+        } else {
+            info!("Failed to read ADC1 data.");
+        }
+
+
+
+        Timer::after(Duration::from_millis(500)).await;
     }
 
-    // #[task(priority = 2, binds = FDCAN1_IT0, shared = [can_command_manager, data_manager, &em])]
-    // fn can_command(mut cx: can_command::Context) {
-    //     // info!("CAN Command");
-    //     cx.shared.can_command_manager.lock(|can| {
-    //         cx.shared
-    //             .data_manager
-    //             .lock(|data_manager| cx.shared.em.run(|| can.process_data(data_manager)));
-    //     })
-    // }
+    // --- SD Card ---
+    let mut sd_spi_config = SpiConfig::default();
 
-    // #[task( priority = 3, binds = FDCAN2_IT0, shared = [&em, can_data_manager, data_manager])]
-    // fn can_data(mut cx: can_data::Context) {
-    //     cx.shared.can_data_manager.lock(|can| {
-    //         {
-    //             cx.shared.data_manager.lock(|data_manager| {
-    //                 cx.shared.em.run(|| {
-    //                     can.process_data(data_manager)?;
-    //                     Ok(())
-    //                 })
-    //             })
-    //         }
-    //     });
-    // }
+    sd_spi_config.frequency = mhz(16);
+    
+    sd_spi_config.mode = embassy_stm32::spi::Mode {
+        polarity: embassy_stm32::spi::Polarity::IdleLow,
+        phase: embassy_stm32::spi::Phase::CaptureOnFirstTransition,
+    };
 
-    // #[task(priority = 2, shared = [&em, can_data_manager, data_manager])]
-    // async fn send_data_internal(
-    //     mut cx: send_data_internal::Context,
-    //     mut receiver: Receiver<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
-    // ) {
-    //     loop {
-    //         if let Ok(m) = receiver.recv().await {
-    //             cx.shared.can_data_manager.lock(|can| {
-    //                 cx.shared.em.run(|| {
-    //                     can.send_message(m)?;
-    //                     Ok(())
-    //                 })
-    //             });
-    //         }
+    sd_spi_config.bit_order = BitOrder::MsbFirst;
+
+    let sd_spi_bus = Spi::new(
+        p.SPI1, p.PA5, p.PA7, p.PA6, p.DMA1_CH4, p.DMA1_CH5, sd_spi_config,
+    );
+
+    let sd_cs = Output::new(p.PC4, Level::High, Speed::Low);
+
+    let sd_spi_bus_ref_cell = RefCell::new(sd_spi_bus);
+    let sd_spi_device = RefCellDevice::new(&sd_spi_bus_ref_cell, sd_cs, Delay);
+
+    let sdcard = SdCard::new(sd_spi_device.unwrap(), Delay);
+    println!("Card size is {} bytes", sdcard.num_bytes().unwrap());
+    let volume_mgr = VolumeManager::new(sdcard, TimeSink::new());
+    let volume0 = volume_mgr.open_volume(VolumeIdx(0)).unwrap();
+    let root_dir = volume0.open_root_dir().unwrap();
+    // let my_file = root_dir.open_file_in_dir("MY_FILE.TXT", Mode::ReadOnly).unwrap();
+    // while !my_file.is_eof() {
+    //     let mut buffer = [0u8; 32];
+    //     let num_read = my_file.read(&mut buffer).unwrap();
+    //     for b in &buffer[0..num_read] {
+    //         info!("{}", *b as char);
     //     }
     // }
 

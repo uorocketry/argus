@@ -79,3 +79,6 @@ version = "0.3.11"
 
 [workspace.dependencies.smlang]
 version = "0.8.0"
+
+[profile.dev.package.defmt]
+log = "info"
