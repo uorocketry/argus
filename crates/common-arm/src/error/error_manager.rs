@@ -1,11 +1,9 @@
 use crate::error::hydra_error::HydraError;
-use crate::herror;
 use core::cell::RefCell;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::Relaxed;
 use cortex_m::interrupt;
 use cortex_m::interrupt::Mutex;
-use defmt::error;
 use heapless::HistoryBuffer;
 
 /// Central error management for HYDRA. A single instance of this should be created for each board.
@@ -43,8 +41,17 @@ impl ErrorManager {
             self.has_error.store(true, Relaxed);
 
             if let Some(c) = e.get_context() {
-                error!("{}", e);
-                herror!(Error, c);
+                match c {
+                    messages_prost::common::ErrorContext::GroundStation => {}
+
+                    messages_prost::common::ErrorContext::NoRadioTransfer => {}
+
+                    messages_prost::common::ErrorContext::UnknownRadioMessage => {}
+
+                    messages_prost::common::ErrorContext::UnkownCanMessage => {}
+
+                    messages_prost::common::ErrorContext::UnkownProstMessage => {}
+                }
             }
 
             interrupt::free(|cs| {

@@ -5,7 +5,12 @@ edition = "2021"
 
 [dependencies]
 defmt = {workspace = true}
-embedded-hal = {workspace = true}
+embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-embedded-hal = { version = "0.3.0" }
+embedded-hal-async = { version = "1.0" }
+embedded-nal-async = "0.8.0"
+embedded-io-async = { version = "0.6.1" }
+embedded-hal = "1.0.0"
 bitflags = { version = "2.3.1", features = ["serde"] }
 nb = "1.1.0"
 heapless = {workspace = true}
