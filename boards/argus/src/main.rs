@@ -308,13 +308,14 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
         let data = adc.read_data();
         if let Ok((_status, raw_data)) = data {
             info!("ADC1 Raw Data: {}", raw_data);
+
             #[cfg(feature = "temperature")]
             {
                 let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
                 info!("Voltage: {} V", volts);
                 let celsius = thermocouple_converter::voltage_to_celsius(volts);
                 info!("Celsius: {} C", celsius);
-
+                        
                 let mut buf: [u8; 255] = [0; 255];
                 let msg = messages_prost::radio::RadioFrame {
                     node: messages_prost::common::Node::Phoenix.into(),
