@@ -1,11 +1,12 @@
 // use atsamd_hal::dmac;
 use core::convert::Infallible;
-use defmt::{write, Format};
+use defmt::write;
 use derive_more::From;
-use embedded_sdmmc as sd;
-use messages::ErrorContext;
 use nb::Error as NbError;
+
+use crate::drivers::ms5611;
 /// Open up atsamd hal errors without including the whole crate.
+use messages_prost::common::ErrorContext;
 
 /// Contains all the various error types that can be encountered in the Hydra codebase. Extra errors
 /// types should be added to this list whenever needed.
@@ -14,14 +15,11 @@ pub enum HydraErrorType {
     /// An Infallible error. This error should never happen.
     Infallible(Infallible),
     /// Error from the Postcard serialization library.
-    PostcardError(postcard::Error),
     /// Error that occurred while spawning an RTIC task. Contains the name of the failed task.
     SpawnError(&'static str),
-    /// Error from the SD card library.
-    SdCardError(sd::Error<sd::SdMmcError>),
     /// Error from the Mavlink library.
-    MavlinkError(messages::mavlink::error::MessageWriteError),
-    MavlinkReadError(messages::mavlink::error::MessageReadError),
+    MavlinkError(messages_prost::mavlink::error::MessageWriteError),
+    MavlinkReadError(messages_prost::mavlink::error::MessageReadError),
     NbError(NbError<Infallible>),
 }
 
@@ -31,14 +29,8 @@ impl defmt::Format for HydraErrorType {
             HydraErrorType::Infallible(_) => {
                 write!(f, "Infallible error encountered!")
             }
-            HydraErrorType::PostcardError(e) => {
-                write!(f, "Postcard error: {}", e)
-            }
             HydraErrorType::SpawnError(e) => {
                 write!(f, "Could not spawn task '{}'", e);
-            }
-            HydraErrorType::SdCardError(_) => {
-                write!(f, "SD card error!");
             }
             HydraErrorType::MavlinkError(_) => {
                 write!(f, "Mavlink error!");
@@ -55,7 +47,6 @@ impl defmt::Format for HydraErrorType {
 
 /// Standard HYDRA error. This type should be used as the return type for most functions that can
 /// fail and that returns a `Result`.
-#[derive(Format)]
 pub struct HydraError {
     error: HydraErrorType,
     context: Option<ErrorContext>,

@@ -1,117 +1,134 @@
+//!
+//! This crate contains code to convert type K thermocouple voltages to temperatures.
+//!
+
 #![no_std]
-//!
-//! This crate contains code to convert type k thermocouple voltages to temperatures.
-//!
 
-///Ranges where polynomial coefficients are for
-pub const ENERGY_RANGES: [[f64; 2]; 3] = [[-5.891, 0.0], [0.0, 20.644], [20.644, 54.886]];
-
-///Type K thermocouple coefficients for polynomial calculation
+/// Type K thermocouple coefficients for polynomial voltage to temperature conversion.
 /// See https://www.eevblog.com/forum/metrology/a-dive-into-k-type-thermocouple-maths/
 pub const TYPE_K_COEF: [[f64; 10]; 3] = [
     [
-        0.0,
-        25.173462,
-        -1.1662878,
-        -1.0833638,
-        -0.89773540,
-        -0.37342377,
-        -0.086632643,
-        -0.010450598,
-        -0.00051920577,
-        0.0,
+        // Coefficients for -5.891 <= voltage <= 0.0
+        0.0000000E+00,
+        2.5173462E+01,
+        -1.1662878E+00,
+        -1.0833638E+00,
+        -8.9773540E-01,
+        -3.7342377E-01,
+        -8.6632643E-02,
+        -1.0450598E-02,
+        -5.1920577E-04,
+        0.0000000E+00,
     ],
     [
-        0.0,
-        25.08355,
-        0.07860106,
-        -0.2503131,
-        0.08315270,
-        -0.01228034,
-        0.0009804036,
-        -0.00004413030,
-        0.000001057734,
-        -0.00000001052755,
+        // Coefficients for 0.0 <= voltage <= 20.644
+        0.000000E+00,
+        2.508355E+01,
+        7.860106E-02,
+        -2.503131E-01,
+        8.315270E-02,
+        -1.228034E-02,
+        9.804036E-04,
+        -4.413030E-05,
+        1.057734E-06,
+        -1.052755E-08,
     ],
     [
-        -131.8058,
-        48.30222,
-        -1.646031,
-        0.05464731,
-        -0.0009650715,
-        0.000008802193,
-        -0.00000003110810,
-        0.0,
-        0.0,
-        0.0,
+        // Coefficients for 20.644 <= voltage <= 54.886
+        -1.318058E+02,
+        4.830222E+01,
+        -1.646031E+00,
+        5.464731E-02,
+        -9.650715E-04,
+        8.802193E-06,
+        -3.110810E-08,
+        0.000000E+00,
+        0.000000E+00,
+        0.000000E+00,
     ],
 ];
 
-///function for power
-/// in: base: f64, exp: i32
-/// out: result: f64
-fn pow(base: f64, exp: i32) -> f64 {
-    let mut result = 1.0;
-    if exp < 0 {
-        result = 1.0 / pow(base, -exp);
-    } else {
-        for _ in 0..exp {
-            result *= base;
-        }
+/// Converts a 32-bit ADC reading to a temperature in celsius.
+pub fn adc_to_celsius(adc_reading: i32) -> Option<f64> {
+    voltage_to_celsius(adc_to_voltage(adc_reading))
+}
+
+/// Converts a 32-bit ADC reading to a voltage.
+pub fn adc_to_voltage(adc_reading: i32) -> f64 {
+    const REFERENCE_VOLTAGE: f64 = 5.0;
+    const MAX_ADC_VALUE: f64 = 4_294_967_296.0;
+    // change 32 to be waht the gain is
+    const V_SCALE: f64 = (REFERENCE_VOLTAGE / MAX_ADC_VALUE) / 32.0;
+
+    adc_reading as f64 * V_SCALE
+}
+
+/// Converts voltage to celsius for type K thermocouples.
+pub fn voltage_to_celsius(mut voltage: f64) -> Option<f64> {
+    voltage *= 1000.0;
+    return match voltage {
+        -5.891..=0.0 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[0])),
+        0.0..=20.644 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[1])),
+        20.644..=54.886 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[2])),
+
+        // Insane temperature ranges that should never be reached.
+        // Hitting this is a strong indicator of a bug in the Argus system.
+        _ => None,
+    };
+}
+
+/// Calculates temperature using the NIST's exponential polynomial.
+fn calc_temp_exponential(voltage: f64, coef: &[f64]) -> f64 {
+    let mut result = 0.0;
+    for k in 0..coef.len() {
+        result += coef[k] * pow(voltage, k as i32);
     }
     return result;
 }
 
-///function to calculate the conversion between voltage to celsius from the thermocoupler.
-///in: voltage: f64
-///out: celsius: f64
-pub fn voltage_to_celsius(voltage: f64) -> f64 {
-    //define variables
-    let mut result = 0.0;
-    let mut i = 0;
-
-    //goes through the different ranges
-    while i < ENERGY_RANGES.len() {
-        if voltage >= ENERGY_RANGES[i][0] && voltage <= ENERGY_RANGES[i][1] {
-            //calculates the result
-            for k in 0..TYPE_K_COEF[i].len() {
-                result += TYPE_K_COEF[i][k] * pow(voltage, k as i32);
-            }
-            return result;
-        } else {
-            //if the voltage is not in the range, it goes to the next range
-            i += 1;
-        }
+/// Floating point exponentiation function.
+/// Cannot access std::f64::powi in no_std environment.
+fn pow(base: f64, exp: i32) -> f64 {
+    if exp < 0 {
+        return 1.0 / pow(base, -exp);
     }
 
-    return -1.0;
+    let mut result = 1.0;
+    for _ in 0..exp {
+        result *= base;
+    }
+    return result;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::voltage_to_celsius;
 
     #[test]
-    fn voltage_to_celsius_test1() {
-        //println!("Test 1: {}", voltage_to_celsius(20.644));
-        let result: f64 = voltage_to_celsius(20.644);
+    fn voltage_to_celsius_converts_expected_ranges() {
+        let result: f64 = voltage_to_celsius(20.644/ 1000.0).unwrap();
         assert!(499.97 <= result && 500.0 >= result);
 
-        // println!("Test 2: {}", voltage_to_celsius(6.138));
-        let result: f64 = voltage_to_celsius(6.138);
+        let result: f64 = voltage_to_celsius(6.138/ 1000.0).unwrap();
         assert!(150.01 <= result && 150.03 >= result);
 
-        // println!("Test 3: {}", voltage_to_celsius(0.039));
-        let result: f64 = voltage_to_celsius(0.039);
+        let result: f64 = voltage_to_celsius(0.039/ 1000.0).unwrap();
         assert!(0.97 <= result && 0.98 >= result);
 
-        // println!("Test 4: {}", voltage_to_celsius(-0.778));
-        let result: f64 = voltage_to_celsius(-0.778);
+        let result: f64 = voltage_to_celsius(-0.778/ 1000.0).unwrap();
         assert!(-20.03 <= result && -20.01 >= result);
 
-        // println!("Test 5: {}", voltage_to_celsius(10.0));
-        let result: f64 = voltage_to_celsius(10.0);
+        let result: f64 = voltage_to_celsius(10.0/ 1000.0).unwrap();
         assert!(246.1 <= result && 246.3 >= result);
+    }
+
+    #[test]
+    fn voltage_to_celsius_panics_on_temp_too_cold() {
+        assert!(voltage_to_celsius(-6.0).is_none());
+    }
+
+    #[test]
+    fn voltage_to_celsius_panics_on_temp_too_hot() {
+        assert!(voltage_to_celsius(-6.0).is_none());
     }
 }

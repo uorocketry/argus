@@ -1,67 +1,98 @@
+use defmt::info;
+use embassy_executor::Spawner;
+use embassy_time::Instant;
+use messages_prost::argus_state::State;
+use messages_prost::prost::Message;
 use smlang::statemachine;
+
+use crate::resources::{EVENT_CHANNEL, SD_CHANNEL};
 
 statemachine! {
     transitions: {
-        *Init + Start = Idle,
-        Idle + WantsCollection = Collection,
-        Idle + NoConfig = Calibration,
-        Calibration + Configured = Idle,
-        Fault + FaultCleared = Idle,
-        _ + FaultDetected = Fault,
+        *Init + CalibrationRequested = Calibration,
+        Calibration + Calibrated = Idle,
+        Idle + CollectionRequested = Collection
     }
 }
 
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-    use crate::traits;
+pub struct Context {}
 
-    #[test]
-    pub fn sm_should_transition_between_states_on_event() {
-        let mut sm = StateMachine::new(traits::Context {});
-    
-        // Should be in init by default
-        assert!(*sm.state() == States::Init);
-    
-        // Should transition to idle on start
-        _ = sm.process_event(Events::Start).unwrap();
-        assert!(*sm.state() == States::Idle);
-    
-        // Should transition to calibration when there is no config
-        _ = sm.process_event(Events::NoConfig).unwrap();
-        assert!(*sm.state() == States::Calibration);
-    
-        // Should transition back to idle when configured
-        _ = sm.process_event(Events::Configured).unwrap();
-        assert!(*sm.state() == States::Idle);
-    
-        // Should transition to collection when asked
-        _ = sm.process_event(Events::WantsCollection).unwrap();
-        assert!(*sm.state() == States::Collection);
+impl StateMachineContext for Context {}
+
+impl From<States> for State {
+    fn from(value: States) -> Self {
+        match value {
+            States::Calibration => State::Calibration,
+            States::Collection => State::Collection,
+            States::Idle => State::Idle,
+            States::Init => State::Init,
+        }
     }
+}
 
-    #[test]
-    pub fn sm_should_handle_fault_in_any_state() {
-        let mut sm = StateMachine::new(traits::Context {});
-    
-        // Should be in init by default
-        assert!(*sm.state() == States::Init);
-    
-        // Should transition to fault on fault detected
-        _ = sm.process_event(Events::FaultDetected).unwrap();
-        assert!(*sm.state() == States::Fault);
-    
-        // Should transition to idle on fault cleared
-        _ = sm.process_event(Events::FaultCleared).unwrap();
-        assert!(*sm.state() == States::Idle);
+#[embassy_executor::task]
+pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>) {
+    info!("State Machine task started.");
 
-        // Check fault transition from another state
-        _ = sm.process_event(Events::WantsCollection).unwrap();
-        _ = sm.process_event(Events::FaultDetected).unwrap();
-        assert!(*sm.state() == States::Fault);
+    loop {
+        if let Ok(event) = EVENT_CHANNEL.try_receive() {
+            state_machine.process_event(event);
+        }
 
-        // Should transition to idle on fault cleared
-        _ = sm.process_event(Events::FaultCleared).unwrap();
-        assert!(*sm.state() == States::Idle);
+        match state_machine.state {
+            States::Init => {
+                let mut buf: [u8; 255] = [0; 255];
+
+                let msg = messages_prost::radio::RadioFrame {
+                    node: messages_prost::common::Node::Phoenix.into(),
+                    payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
+                        State::Init.into(),
+                    )),
+                    millis_since_start: Instant::now().as_millis(),
+                };
+                msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
+                SD_CHANNEL.send(("state.txt", buf)).await;
+            }
+            States::Idle => {
+                let mut buf: [u8; 255] = [0; 255];
+
+                let msg = messages_prost::radio::RadioFrame {
+                    node: messages_prost::common::Node::Phoenix.into(),
+                    payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
+                        State::Idle.into(),
+                    )),
+                    millis_since_start: Instant::now().as_millis(),
+                };
+                msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
+                SD_CHANNEL.send(("state.txt", buf)).await;
+            }
+            States::Calibration => {
+                let mut buf: [u8; 255] = [0; 255];
+
+                let msg = messages_prost::radio::RadioFrame {
+                    node: messages_prost::common::Node::Phoenix.into(),
+                    payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
+                        State::Calibration.into(),
+                    )),
+                    millis_since_start: Instant::now().as_millis(),
+                };
+                msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
+                SD_CHANNEL.send(("state.txt", buf)).await;
+            }
+            States::Collection => {
+                let mut buf: [u8; 255] = [0; 255];
+
+                let msg = messages_prost::radio::RadioFrame {
+                    node: messages_prost::common::Node::Phoenix.into(),
+                    payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
+                        State::Collection.into(),
+                    )),
+                    millis_since_start: Instant::now().as_millis(),
+                };
+                msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
+                SD_CHANNEL.send(("state.txt", buf)).await;
+                info!("Wait For Launch");
+            }
+        }
     }
 }
