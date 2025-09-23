@@ -7,6 +7,12 @@ pub struct FakeTimeSource {
 	_marker: PhantomData<*const ()>,
 }
 
+impl Default for FakeTimeSource {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl FakeTimeSource {
 	pub fn new() -> Self {
 		FakeTimeSource { _marker: PhantomData }

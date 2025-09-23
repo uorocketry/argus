@@ -10,6 +10,8 @@ mod tests {
 	// But with assert_eq, etc we don't need to see panic messages anyway
 	// So for now this is acceptable, but we should try to fix this in the future
 
+	use core::str::FromStr;
+
 	use argus::sd::service::SDCardService;
 	use argus::sd::types::{FileName, Line, OperationScope};
 	use argus::utils::hal::configure_hal;
@@ -25,8 +27,8 @@ mod tests {
 
 	#[test]
 	fn writing_directly_to_sd_card(mut sd_card_service: SDCardService) {
-		let path: String<12> = FileName::from("test.txt");
-		let text = Line::from("Hello, world!");
+		let path: String<12> = FileName::from_str("test.txt").unwrap();
+		let text = Line::from_str("Hello, world!").unwrap();
 		sd_card_service.delete(OperationScope::Root, path.clone()).unwrap();
 		sd_card_service.write(OperationScope::Root, path.clone(), text.clone()).unwrap();
 		sd_card_service

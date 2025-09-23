@@ -1,4 +1,4 @@
-use defmt::debug;
+use defmt::{debug, error};
 use embassy_executor::task;
 
 use crate::adc::config::ADC_COUNT;
@@ -12,13 +12,10 @@ use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and channels, measures the temperature, and enqueues the readings to a channel
 #[task]
-pub async fn measure(
+pub async fn measure_thermocouples(
 	mut worker: StateMachineWorker,
 	temperature_service_mutex: &'static AsyncMutex<TemperatureService>,
 ) {
-	// Configure the ADCs for temperature measurement
-	temperature_service_mutex.lock().await.setup().await.unwrap();
-
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
 			let mut temperature_service = temperature_service_mutex.lock().await;
@@ -33,8 +30,8 @@ pub async fn measure(
 							debug!("ADC {} Channel {}: {}", adc, channel, data);
 							THERMOCOUPLE_READING_QUEUE.send((adc, channel, data)).await;
 						}
-						Err(error) => {
-							debug!("Error reading ADC {} Channel {}: {:?}", adc, channel, error);
+						Err(err) => {
+							error!("Error reading ADC {} Channel {}: {:?}", adc, channel, err);
 							continue;
 						}
 					}

@@ -12,7 +12,7 @@ name: Build Verification
 
 jobs:
   formatting:
-    name: Check for Formatting Issues
+    name: Check for Formatting/Linting/Semantic Issues
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,6 +31,9 @@ jobs:
 
       - name: Check Cargo.toml Sorting
         run: cargo sort --check
+
+      - name: Check for Clippy Warnings
+        run: cargo clippy --all-targets --all-features
 
   build_pressure:
     name: Build with Pressure Feature

@@ -13,3 +13,5 @@ pub use filter::*;
 pub use gain::*;
 pub use reference_range::*;
 pub use register::*;
+
+pub type Voltage = f32;

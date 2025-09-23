@@ -6,17 +6,22 @@ description: Install deps, ARM toolchain, and Rust toolchain
 runs:
   using: composite
   steps:
-    - name: Cache/Restore Build Files
-      id: cache-check
+    - name: Rust build cache (crates + target)
+      uses: Swatinem/rust-cache@v2
+      with:
+        # Cache is scoped by OS, Rust version, target triple, and workspace hash
+        save-if: true
+        cache-all-crates: true
+        workspaces: |
+          . -> target
+
+    - name: Cache Rustup Toolchains
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          ~/.rustup/toolchains/
+          ~/.rustup/update-hashes/
+        key: ${{ runner.os }}-rustup-stable-thumbv7em-none-eabihf
 
     - name: Disable man-db (skip Manual Page Installs)
       shell: bash
@@ -29,7 +34,7 @@ runs:
       shell: bash
       run: |
         sudo apt update
-        sudo apt install -y cmake protobuf-compiler
+        sudo apt-get install -y --no-install-recommends cmake protobuf-compiler
 
     - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
       uses: carlosperate/arm-none-eabi-gcc-action@v1
@@ -41,9 +46,23 @@ runs:
       with:
         toolchain: stable
         target: thumbv7em-none-eabihf
+        profile: minimal
+        override: true
+        components: rustfmt, clippy
 
-    - name: Install Cargo Dependencies
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args: --force cargo-make cargo-sort
+    - name: Install Cargo Binaries (idempotent)
+      shell: bash
+      run: |
+        set -euo pipefail
+        ensure_bin() {
+          local bin="$1"; shift
+          if ! command -v "$bin" >/dev/null 2>&1; then
+            echo "Installing $bin..."
+            cargo install "$@"
+          else
+            echo "$bin already installed; skipping"
+          fi
+        }
+        # Pin versions for reproducibility and better cache hits
+        ensure_bin cargo-make cargo-make@0.37.7
+        ensure_bin cargo-sort cargo-sort@1.0.9

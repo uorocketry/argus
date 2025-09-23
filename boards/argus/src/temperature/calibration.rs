@@ -50,8 +50,8 @@ impl TemperatureService {
 		let mut calibration_data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS> = Vec::new();
 		for data_point_index in 0..data_points_count {
 			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees celsius:\n", data_point_index + 1).unwrap();
-			let expected_temperature: f32 = self.prompt(message.as_str()).await?;
-			let measured_temperature: f32 = self.read_thermocouple(adc, channel).await?.compensated_temperature_in_celsius.unwrap();
+			let expected_temperature: f64 = self.prompt(message.as_str()).await?;
+			let measured_temperature: f64 = self.read_thermocouple(adc, channel).await?.compensated_temperature;
 			let data_point = CalibrationDataPoint {
 				expected_temperature,
 				measured_temperature,
@@ -86,14 +86,14 @@ impl TemperatureService {
 		channel: ThermocoupleChannel,
 		data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS>,
 	) -> LinearTransformation {
-		// Keeping all types as f32
-		let data_points_count: f32 = data_points.len() as f32;
+		// Keeping all types as f64
+		let data_points_count: f64 = data_points.len() as f64;
 
 		// Accumulate sums
-		let mut sum_x: f32 = 0.0; // measured
-		let mut sum_y: f32 = 0.0; // expected
-		let mut sum_xx: f32 = 0.0; // measured^2
-		let mut sum_xy: f32 = 0.0; // measured * expected
+		let mut sum_x: f64 = 0.0; // measured
+		let mut sum_y: f64 = 0.0; // expected
+		let mut sum_xx: f64 = 0.0; // measured^2
+		let mut sum_xy: f64 = 0.0; // measured * expected
 
 		for data_point in data_points.iter() {
 			let x = data_point.measured_temperature;
@@ -154,8 +154,8 @@ impl TemperatureService {
 #[derive(Debug, Clone, Copy, Format)]
 pub struct CalibrationDataPoint {
 	// Expected temperature value in degrees Celsius measured by the calibration instrument
-	pub expected_temperature: f32,
+	pub expected_temperature: f64,
 
 	// Value measured by the ADC
-	pub measured_temperature: f32,
+	pub measured_temperature: f64,
 }

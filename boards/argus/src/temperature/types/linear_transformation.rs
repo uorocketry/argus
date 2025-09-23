@@ -14,8 +14,8 @@ use crate::temperature::types::thermocouple_channel::ThermocoupleChannel;
 pub struct LinearTransformation {
 	pub adc: AdcDevice,
 	pub channel: ThermocoupleChannel,
-	pub gain: f32,
-	pub offset: f32,
+	pub gain: f64,
+	pub offset: f64,
 }
 impl Default for LinearTransformation {
 	fn default() -> Self {

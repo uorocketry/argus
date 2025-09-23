@@ -99,7 +99,18 @@ async fn main(spawner: Spawner) {
 		use argus::temperature::tasks;
 
 		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_card_service, serial_service)));
-		spawner.must_spawn(tasks::measure(StateMachineWorker::new(state_machine_orchestrator), temperature_service));
+
+		// Setup the temperature service before starting the tasks
+		temperature_service.lock().await.setup().await.unwrap();
+
+		spawner.must_spawn(tasks::measure_rtds(
+			StateMachineWorker::new(state_machine_orchestrator),
+			temperature_service,
+		));
+		spawner.must_spawn(tasks::measure_thermocouples(
+			StateMachineWorker::new(state_machine_orchestrator),
+			temperature_service,
+		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
 			sd_card_service,

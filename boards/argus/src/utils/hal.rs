@@ -49,5 +49,5 @@ pub fn configure_hal() -> Peripherals {
 	config.rcc.apb4_pre = APBPrescaler::DIV2; // 100 Mhz
 	config.rcc.voltage_scale = VoltageScale::Scale1;
 
-	return init(config);
+	init(config)
 }

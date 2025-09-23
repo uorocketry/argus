@@ -54,10 +54,10 @@ impl SDCardService {
 		let sd_card = SDCardInstance::new(spi_device, Delay);
 		let volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES> = SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
 
-		return SDCardService {
+		SDCardService {
 			volume_manager,
 			current_session: None,
-		};
+		}
 	}
 
 	// Closure that handles accessing root directory
@@ -68,7 +68,7 @@ impl SDCardService {
 		debug!("Opening root directory");
 		let volume = self.volume_manager.open_volume(VolumeIdx(0))?;
 		let root_dir = volume.open_root_dir()?;
-		return f(root_dir);
+		f(root_dir)
 	}
 
 	// Non-blocking write that queues the message to be written by the async task
@@ -155,9 +155,9 @@ impl SDCardService {
 		self.read(scope, path, |line| {
 			if lines.len() < LINES_COUNT {
 				lines.push(line.clone()).ok(); // Ignore capacity error
-				return true;
+				true
 			} else {
-				return false;
+				false
 			}
 		})?;
 		Ok(lines)
@@ -231,7 +231,7 @@ impl SDCardService {
 					match read_byte {
 						b'\n' => {
 							// End of line (LF). Emit and clear.
-							if handle_line(&line) == false {
+							if !handle_line(&line) {
 								return Ok(()); // Stop reading if handler returns false
 							}
 							line.clear();
@@ -243,7 +243,7 @@ impl SDCardService {
 							// Push char if capacity allows; if full, emit as a line-chunk and continue
 							if line.push(read_byte as char).is_err() {
 								// Buffer full — emit current chunk as a line
-								if handle_line(&line) == false {
+								if !handle_line(&line) {
 									return Ok(()); // Stop reading if handler returns false
 								}
 								line.clear();
@@ -278,7 +278,7 @@ impl SDCardService {
 
 		self.with_root::<(), SdCardError>(|root_dir| {
 			debug!("Creating session directory: {}", current_session_str);
-			return root_dir.make_dir_in_dir(current_session_str);
+			root_dir.make_dir_in_dir(current_session_str)
 		})
 	}
 
@@ -288,7 +288,7 @@ impl SDCardService {
 		// Sessions are directories generated on root directory: numbers starting from 0 autoincrementing
 		let mut last_session: u8 = 0;
 
-		return self.with_root::<u8, SdCardError>(|root_dir| {
+		self.with_root::<u8, SdCardError>(|root_dir| {
 			root_dir.iterate_dir(|entry| {
 				if !entry.attributes.is_directory() {
 					return;
@@ -302,17 +302,17 @@ impl SDCardService {
 			})?;
 
 			debug!("Last session number: {}", last_session);
-			return Ok(last_session);
-		});
+			Ok(last_session)
+		})
 	}
 }
 
 /// Get the name of a file or directory from its basename i.e. remove the extension
 /// Example: foo.txt -> foo
-fn get_name_from_basename<'b>(bytes: &'b [u8]) -> &'b str {
+fn get_name_from_basename(bytes: &[u8]) -> &str {
 	let mut end = bytes.len();
 	while end > 0 && bytes[end - 1] == b' ' {
 		end -= 1;
 	}
-	return core::str::from_utf8(&bytes[..end]).unwrap();
+	core::str::from_utf8(&bytes[..end]).unwrap()
 }

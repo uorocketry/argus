@@ -16,6 +16,12 @@ static CURRENT_STATE: StateWatch = StateWatch::new();
 pub struct StateMachineOrchestrator {
 	state_machine: StateMachine<Context>,
 }
+impl Default for StateMachineOrchestrator {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl StateMachineOrchestrator {
 	pub fn new() -> Self {
 		Self {

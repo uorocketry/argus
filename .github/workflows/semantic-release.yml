@@ -34,12 +34,15 @@ jobs:
 
       - name: Build project with Pressure Feature
         run: cargo build --release --features pressure
+        working-directory: boards/argus
 
       - name: Build project with Temperature Feature
         run: cargo build --release --features temperature
+        working-directory: boards/argus
 
       - name: Build project with Strain Feature
         run: cargo build --release --features strain
+        working-directory: boards/argus
 
       - name: Run semantic-release
         id: semantic-release
